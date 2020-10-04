@@ -10,7 +10,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioProcessor& p)
+VstHwAudioProcessorEditor::VstHwAudioProcessorEditor (VstHwAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
     m_gainSlider.setSliderStyle(juce::Slider::SliderStyle::LinearVertical);
@@ -24,12 +24,12 @@ NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioP
     setSize (400, 300);
 }
 
-NewProjectAudioProcessorEditor::~NewProjectAudioProcessorEditor()
+VstHwAudioProcessorEditor::~VstHwAudioProcessorEditor()
 {
 }
 
 //==============================================================================
-void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
+void VstHwAudioProcessorEditor::paint (juce::Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
@@ -39,17 +39,17 @@ void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
     //g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
-void NewProjectAudioProcessorEditor::resized()
+void VstHwAudioProcessorEditor::resized()
 {
     m_gainSlider.setBounds((getWidth() >> 1) - 50, getHeight() >> 1, 100, 150);
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
 }
 
-void NewProjectAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
+void VstHwAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
 {
     if (slider == &m_gainSlider)
     {
-        static_cast<NewProjectAudioProcessor*>(&processor)->setGain(slider->getValue());
+        static_cast<VstHwAudioProcessor*>(&processor)->setGain(slider->getValue());
     }
 }
