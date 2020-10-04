@@ -38,6 +38,7 @@ public:
     const juce::String getName() const override;
 
     bool acceptsMidi() const override;
+    void loadFile();
     bool producesMidi() const override;
     bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
@@ -54,10 +55,14 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
     void setGain(double gain) { m_gain = gain; }
-    double getGain(double gain) const { return m_gain; }
+    double getGain() const { return m_gain; }
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VstHwAudioProcessor)
 
         double m_gain;
+        juce::Synthesiser m_synthesiser;
+        const int m_voices = 3;
+        juce::AudioFormatManager m_formatManager;
+        juce::AudioFormatReader* m_formatReader{nullptr};
 };

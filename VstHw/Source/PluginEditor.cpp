@@ -19,14 +19,18 @@ VstHwAudioProcessorEditor::VstHwAudioProcessorEditor (VstHwAudioProcessor& p)
     m_gainSlider.setValue(-20.f);
     m_gainSlider.addListener(this);
     addAndMakeVisible(m_gainSlider);
+
+    m_loadButton.onClick = [&]() {static_cast<VstHwAudioProcessor*>(&processor)->loadFile(); };
+
+    addAndMakeVisible(m_loadButton);
+    
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (400, 300);
 }
 
 VstHwAudioProcessorEditor::~VstHwAudioProcessorEditor()
-{
-}
+= default;
 
 //==============================================================================
 void VstHwAudioProcessorEditor::paint (juce::Graphics& g)
@@ -41,7 +45,8 @@ void VstHwAudioProcessorEditor::paint (juce::Graphics& g)
 
 void VstHwAudioProcessorEditor::resized()
 {
-    m_gainSlider.setBounds((getWidth() >> 1) - 50, getHeight() >> 1, 100, 150);
+    m_gainSlider.setBounds((getWidth() >> 1) - 40, getHeight() >> 1, 100, 150);
+    m_loadButton.setBounds((getWidth() >> 1) - 40, getHeight() >> 1, 100, 30);
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
 }

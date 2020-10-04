@@ -4,7 +4,7 @@
               addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
               companyName="Oleum" companyCopyright="Ruslan Gaifulin" companyEmail="ruslanmgaifulin@gmail.com"
               pluginVST3Category="Delay,Distortion,EQ,Filter,Fx,Generator,Instrument,Network,Reverb"
-              cppLanguageStandard="17">
+              cppLanguageStandard="17" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="XCK8oq" name="VstHw">
     <GROUP id="{75E3D691-D93A-9662-9980-689B0FA861E6}" name="Source">
       <FILE id="comUwp" name="PluginProcessor.cpp" compile="1" resource="0"

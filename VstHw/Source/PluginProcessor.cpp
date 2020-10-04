@@ -12,16 +12,21 @@
 //==============================================================================
 VstHwAudioProcessor::VstHwAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+    : AudioProcessor(BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+        .withInput("Input", juce::AudioChannelSet::stereo(), true)
+#endif
+        .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+#endif
+    )
 #endif
 {
+    m_formatManager.registerBasicFormats();
+    for (int i = 0; i < m_voices; ++i)
+    {
+        m_synthesiser.addVoice(new juce::SamplerVoice());
+    }
 }
 
 VstHwAudioProcessor::~VstHwAudioProcessor()
@@ -36,29 +41,46 @@ const juce::String VstHwAudioProcessor::getName() const
 
 bool VstHwAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
-
+void VstHwAudioProcessor::loadFile()
+{
+    juce::FileChooser fileChooser("Please load file",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.wav; *.mp3");
+    if (fileChooser.browseForFileToOpen()
+        )
+    {
+        auto file = fileChooser.getResult();
+        m_formatReader = m_formatManager.createReaderFor(file);
+        if (m_formatReader)
+        {
+            juce::BigInteger range;
+            range.setRange(0, 128, true);
+            m_synthesiser.addSound(new juce::SamplerSound("Sample", *m_formatReader, range, 60, 0.1, 0.1, 10.0));
+            // All of the samples in the buffer are set to 0 after the call to read!
+        }
+    }
+}
 bool VstHwAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool VstHwAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 double VstHwAudioProcessor::getTailLengthSeconds() const
@@ -77,22 +99,23 @@ int VstHwAudioProcessor::getCurrentProgram()
     return 0;
 }
 
-void VstHwAudioProcessor::setCurrentProgram (int index)
+void VstHwAudioProcessor::setCurrentProgram(int index)
 {
 }
 
-const juce::String VstHwAudioProcessor::getProgramName (int index)
+const juce::String VstHwAudioProcessor::getProgramName(int index)
 {
     return {};
 }
 
-void VstHwAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void VstHwAudioProcessor::changeProgramName(int index, const juce::String& newName)
 {
 }
 
 //==============================================================================
-void VstHwAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void VstHwAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+    m_synthesiser.setCurrentPlaybackSampleRate(sampleRate);
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 }
@@ -104,33 +127,33 @@ void VstHwAudioProcessor::releaseResources()
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool VstHwAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool VstHwAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
-    juce::ignoreUnused (layouts);
+#if JucePlugin_IsMidiEffect
+    juce::ignoreUnused(layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
+        && layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
         return false;
 
     // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
+#endif
 
     return true;
-  #endif
+#endif
 }
 #endif
 
-void VstHwAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void VstHwAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    const auto totalNumInputChannels  = getTotalNumInputChannels();
+    const auto totalNumInputChannels = getTotalNumInputChannels();
     const auto totalNumOutputChannels = getTotalNumOutputChannels();
 
     // In case we have more outputs than inputs, this code clears any output
@@ -151,14 +174,16 @@ void VstHwAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     // interleaved by keeping the same state.
 
     const auto numberOfSamples = buffer.getNumSamples();
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-         for (int sample = 0; sample < numberOfSamples; ++sample)
-         {
-             channelData[sample] *= static_cast<float>(juce::Decibels::decibelsToGain(m_gain));
-         }
-    }
+    //for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    //{
+    //    auto* channelData = buffer.getWritePointer(channel);
+    //    for (int sample = 0; sample < numberOfSamples; ++sample)
+    //    {
+    //        channelData[sample] *= static_cast<float>(juce::Decibels::decibelsToGain(m_gain));
+    //    }
+    //}
+
+    m_synthesiser.renderNextBlock(buffer, midiMessages, 0, numberOfSamples);
 }
 
 //==============================================================================
@@ -169,18 +194,18 @@ bool VstHwAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* VstHwAudioProcessor::createEditor()
 {
-    return new VstHwAudioProcessorEditor (*this);
+    return new VstHwAudioProcessorEditor(*this);
 }
 
 //==============================================================================
-void VstHwAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void VstHwAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
 }
 
-void VstHwAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void VstHwAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.

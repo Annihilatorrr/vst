@@ -28,6 +28,7 @@ public:
 private:
 
     juce::Slider m_gainSlider;
+    juce::TextButton m_loadButton {"Load"};
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     VstHwAudioProcessor& audioProcessor;
