@@ -31,6 +31,7 @@ VstHwAudioProcessor::VstHwAudioProcessor()
 
 VstHwAudioProcessor::~VstHwAudioProcessor()
 {
+    delete m_formatReader;
 }
 
 //==============================================================================
@@ -51,17 +52,15 @@ void VstHwAudioProcessor::loadFile()
 {
     juce::FileChooser fileChooser("Please load file",
         juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.wav; *.mp3");
-    if (fileChooser.browseForFileToOpen()
-        )
+    if (fileChooser.browseForFileToOpen())
     {
         auto file = fileChooser.getResult();
-        m_formatReader = m_formatManager.createReaderFor(file);
-        if (m_formatReader)
+        std::unique_ptr<juce::AudioFormatReader> formatReader(m_formatManager.createReaderFor(file));
+        if (formatReader)
         {
             juce::BigInteger range;
             range.setRange(0, 128, true);
-            m_synthesiser.addSound(new juce::SamplerSound("Sample", *m_formatReader, range, 60, 0.1, 0.1, 10.0));
-            // All of the samples in the buffer are set to 0 after the call to read!
+            m_synthesiser.addSound(new juce::SamplerSound("Sample", *formatReader, range, 60, 0.0, 0.001, 10.0));
         }
     }
 }
@@ -174,14 +173,14 @@ void VstHwAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::M
     // interleaved by keeping the same state.
 
     const auto numberOfSamples = buffer.getNumSamples();
-    //for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    //{
-    //    auto* channelData = buffer.getWritePointer(channel);
-    //    for (int sample = 0; sample < numberOfSamples; ++sample)
-    //    {
-    //        channelData[sample] *= static_cast<float>(juce::Decibels::decibelsToGain(m_gain));
-    //    }
-    //}
+    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        for (int sample = 0; sample < numberOfSamples; ++sample)
+        {
+            channelData[sample] *= static_cast<float>(juce::Decibels::decibelsToGain(m_gain));
+        }
+    }
 
     m_synthesiser.renderNextBlock(buffer, midiMessages, 0, numberOfSamples);
 }
